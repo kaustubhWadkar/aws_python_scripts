@@ -1,0 +1,53 @@
+# the below code is for creation of ssm parameter in aws ,  using json event
+
+import boto3
+import json
+from botocore.exceptions import ClientError
+
+# Initialize SSM client
+ssm = boto3.client('ssm')
+
+def lambda_handler(event, context):
+   
+    results = []
+    param_type = event.get("type", "String")
+    parameters = event.get("parameters", [])
+
+    for item in parameters:
+        try:
+            # Split name=value
+            if '=' not in item:
+                results.append({"parameter": item, "status": "Failed", "error": "Invalid format"})
+                continue
+            
+            name, value = item.split("=", 1)  # Split only on first '='
+            # Optional: prepend a path like /config/app_uat/
+            ssm_name = f"/config/app_uat/{name}"
+
+            ssm.put_parameter(
+                Name=ssm_name,
+                Value=value,
+                Type=param_type,
+                Overwrite=True
+            )
+            results.append({"parameter": ssm_name, "status": "Success"})
+        except ClientError as e:
+            results.append({"parameter": item, "status": "Failed", "error": str(e)})
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps(results)
+    }
+
+
+
+
+#################below is sample json format that can be passed for lambda in test event
+
+
+{
+  "parameters": [
+    "kaustubh=wadkarok"
+  ],
+  "type": "String"
+}
